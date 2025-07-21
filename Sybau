@@ -31,6 +31,35 @@ local function hoverEffect(btn, normalColor, hoverColor)
     end)
 end
 
+local TweenService = game:GetService("TweenService")
+
+local function fadeOverlay(overlay, show)
+    local goal = {}
+    if show then
+        overlay.Visible = true
+        goal.BackgroundTransparency = 0.4
+    else
+        goal.BackgroundTransparency = 1
+    end
+    local tween = TweenService:Create(overlay, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal)
+    tween:Play()
+    tween.Completed:Connect(function()
+        if not show then
+            overlay.Visible = false
+        end
+    end)
+end
+
+-- ===== Overlay =====
+local overlay = Instance.new("Frame")
+overlay.Size = UDim2.new(1,0,1,0)
+overlay.Position = UDim2.new(0,0,0,0)
+overlay.BackgroundColor3 = Color3.fromRGB(0,0,0)
+overlay.BackgroundTransparency = 1
+overlay.Visible = false
+overlay.ZIndex = 0
+overlay.Parent = gui
+
 -- ===== Main Frame =====
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 420, 0, 270)
@@ -54,13 +83,13 @@ titleText.Size = UDim2.new(1,-80,1,0)
 titleText.Position = UDim2.new(0,15,0,0)
 titleText.BackgroundTransparency = 1
 titleText.Font = Enum.Font.GothamBold
-titleText.Text = "🐣 102TEAMS102TEAMS"
+titleText.Text = "🐣 102TEAMS Menu"
 titleText.TextSize = 22
 titleText.TextColor3 = Color3.fromRGB(255,255,255)
 titleText.TextXAlignment = Enum.TextXAlignment.Left
 titleText.Parent = titleBar
 
--- ===== Buttons =====
+-- ===== Buttons on title =====
 local minimizeBtn = Instance.new("TextButton")
 minimizeBtn.Size = UDim2.new(0,35,0,35)
 minimizeBtn.Position = UDim2.new(1,-80,0.5,-17)
@@ -174,14 +203,19 @@ btn3.MouseButton1Click:Connect(function()
     alert("❌ Resource package error, please rejoin the game.")
 end)
 
+-- ===== Toggle Show/Hide =====
 minimizeBtn.MouseButton1Click:Connect(function()
     mainFrame.Visible = false
+    fadeOverlay(overlay, false)
 end)
 
 toggleBtn.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
+    local newState = not mainFrame.Visible
+    mainFrame.Visible = newState
+    fadeOverlay(overlay, newState)
 end)
 
 closeBtn.MouseButton1Click:Connect(function()
     mainFrame.Visible = false
+    fadeOverlay(overlay, false)
 end)
