@@ -38,13 +38,6 @@ local function removeUnwantedGUI()
     end
 end
 
--- Tự động chạy và lặp lại
-task.spawn(function()
-    while true do
-        pcall(removeUnwantedGUI)
-        task.wait(1) -- Lặp lại mỗi giây
-    end
-end)
 
 local player = game.Players.LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
