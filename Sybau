@@ -1,198 +1,111 @@
-local player = game.Players.LocalPlayer
-local PlayerGui = player:WaitForChild("PlayerGui")
+local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
 
--- GUI Base
+-- Xóa GUI lạ nếu tồn tại
+for _, gui in ipairs(PlayerGui:GetChildren()) do
+    if gui:IsA("ScreenGui") and gui:FindFirstChildWhichIsA("TextLabel", true) and gui:FindFirstChildWhichIsA("TextLabel", true).Text:find("Script Loading Please Wait") then
+        gui:Destroy()
+    end
+end
+
+-- Pet Database
+local petData = {
+    ["Common Egg"] = {"Dog", "Golden Lad", "Bunny"},
+    ["Uncommon Egg"] = {"Deer", "Cat", "Chicken"},
+    ["Rare Egg"] = {"Cow", "Sheep", "Goat"},
+    ["Bug Egg"] = {"Snail", "Bee", "Mantis", "Giant Ant", "Dragonfly"},
+    ["Zen Egg"] = {"Shiba Inu", "Kappa", "Kitsune", "Tanuki", "Nihonzaru"},
+    ["Mythical Egg"] = {"Red Fox", "Grey Mouse", "Squirrel", "Tiger", "Panda"},
+    ["Legendary Egg"] = {"Polar Bear", "Peacock", "Turtle", "Elephant", "Leopard"},
+    ["Dinosaur Egg"] = {"T-Rex", "Stegosaurus", "Triceratops", "Pterodactyl", "Velociraptor"},
+    ["Rainbow Egg"] = {"Unicorn", "Rainbow Cat", "Pegasus", "Glitter Deer"},
+}
+
+-- Pet hiếm có tỉ lệ thấp hơn
+local rarePets = {
+    ["Dragonfly"] = true,
+    ["Kitsune"] = true,
+    ["Red Fox"] = true,
+    ["Polar Bear"] = true,
+    ["T-Rex"] = true,
+}
+
+-- GUI Setup
 local gui = Instance.new("ScreenGui", PlayerGui)
-gui.Name = "ModernGAGUI"
-gui.IgnoreGuiInset = true
+gui.Name = "PetRandomizerGUI"
 gui.ResetOnSpawn = false
 
--- Blur Effect
-local blur = Instance.new("BlurEffect")
-blur.Size = 0
-blur.Parent = game.Lighting
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 300, 0, 180)
+frame.Position = UDim2.new(0.5, -150, 0.5, -90)
+frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+frame.BorderSizePixel = 0
+frame.BackgroundTransparency = 0.2
+frame.Active = true
+frame.Draggable = true
 
--- Overlay
-local overlay = Instance.new("Frame")
-overlay.Size = UDim2.new(1,0,1,0)
-overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-overlay.BackgroundTransparency = 1
-overlay.ZIndex = 0
-overlay.Visible = false
-overlay.Parent = gui
-
--- Main Frame
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 460, 0, 290)
-mainFrame.Position = UDim2.new(0.5, -230, 0.5, -145)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-mainFrame.BackgroundTransparency = 0.05
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Parent = gui
-
--- Decorations
-local function round(obj, radius)
-	local c = Instance.new("UICorner", obj)
-	c.CornerRadius = UDim.new(0, radius or 12)
-end
-
-local function stroke(obj, color, thickness)
-	local s = Instance.new("UIStroke", obj)
-	s.Color = color or Color3.fromRGB(255,255,255)
-	s.Thickness = thickness or 2
-	s.Transparency = 0.6
-end
-
-local function hover(btn, normal, hover)
-	btn.MouseEnter:Connect(function() btn.BackgroundColor3 = hover end)
-	btn.MouseLeave:Connect(function() btn.BackgroundColor3 = normal end)
-end
-
-round(mainFrame, 20)
-stroke(mainFrame, Color3.fromRGB(255,255,255), 2)
-
--- Title Bar
-local titleBar = Instance.new("Frame", mainFrame)
-titleBar.Size = UDim2.new(1,0,0,40)
-titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 75)
-round(titleBar, 20)
-
-local title = Instance.new("TextLabel", titleBar)
-title.Size = UDim2.new(1, -100, 1, 0)
-title.Position = UDim2.new(0, 20, 0, 0)
-title.BackgroundTransparency = 1
-title.Text = "✨ CORRUPTED UPDATE"
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Text = "🎲 Pet Randomizer"
 title.Font = Enum.Font.GothamBold
-title.TextColor3 = Color3.fromRGB(255,255,255)
-title.TextSize = 20
-title.TextXAlignment = Enum.TextXAlignment.Left
+title.TextColor3 = Color3.new(1, 1, 1)
+title.BackgroundTransparency = 1
+title.TextSize = 18
 
--- Close Button
-local closeBtn = Instance.new("TextButton", titleBar)
-closeBtn.Size = UDim2.new(0, 35, 0, 35)
-closeBtn.Position = UDim2.new(1, -45, 0.5, -17)
-closeBtn.Text = "✖"
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 18
-closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-closeBtn.TextColor3 = Color3.fromRGB(255,255,255)
-round(closeBtn, 10)
-stroke(closeBtn)
-hover(closeBtn, Color3.fromRGB(200, 60, 60), Color3.fromRGB(220, 80, 80))
+local eggDropdown = Instance.new("TextBox", frame)
+eggDropdown.PlaceholderText = "Type Egg Name (e.g., Zen Egg)"
+eggDropdown.Text = ""
+eggDropdown.Size = UDim2.new(1, -20, 0, 30)
+eggDropdown.Position = UDim2.new(0, 10, 0, 40)
+eggDropdown.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+eggDropdown.TextColor3 = Color3.new(0, 0, 0)
+eggDropdown.ClearTextOnFocus = false
 
--- Content Frame
-local content = Instance.new("Frame", mainFrame)
-content.Size = UDim2.new(1,0,1,-40)
-content.Position = UDim2.new(0,0,0,40)
-content.BackgroundTransparency = 1
+local resultLabel = Instance.new("TextLabel", frame)
+resultLabel.Size = UDim2.new(1, -20, 0, 50)
+resultLabel.Position = UDim2.new(0, 10, 0, 80)
+resultLabel.BackgroundTransparency = 1
+resultLabel.Text = "Result will appear here"
+resultLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+resultLabel.Font = Enum.Font.GothamBold
+resultLabel.TextSize = 20
 
--- Button Generator
-local function makeButton(text, y, color, hoverColor)
-	local b = Instance.new("TextButton", content)
-	b.Size = UDim2.new(0, 400, 0, 50)
-	b.Position = UDim2.new(0.5, -200, 0, y)
-	b.Text = text
-	b.Font = Enum.Font.GothamBold
-	b.TextSize = 20
-	b.TextColor3 = Color3.fromRGB(255,255,255)
-	b.BackgroundColor3 = color
-	round(b, 12)
-	stroke(b)
-	hover(b, color, hoverColor)
-	return b
-end
+local randomButton = Instance.new("TextButton", frame)
+randomButton.Text = "Random!"
+randomButton.Size = UDim2.new(1, -20, 0, 30)
+randomButton.Position = UDim2.new(0, 10, 0, 135)
+randomButton.BackgroundColor3 = Color3.fromRGB(80, 160, 255)
+randomButton.TextColor3 = Color3.new(1, 1, 1)
+randomButton.Font = Enum.Font.Gotham
+randomButton.TextSize = 16
 
--- Buttons
-local btn1 = makeButton("📥 Step 1: Download Resource", 15, Color3.fromRGB(90,140,240), Color3.fromRGB(110,160,255))
-local btn2 = makeButton("🎲 Step 2: Random Egg", 85, Color3.fromRGB(100,200,120), Color3.fromRGB(130,230,150))
-local btn3 = makeButton("🌀 Step 3: Dupe Tool", 155, Color3.fromRGB(220,160,90), Color3.fromRGB(240,180,110))
+-- Cooldown logic
+local lastClick = 0
+randomButton.MouseButton1Click:Connect(function()
+    if tick() - lastClick < 5 then
+        resultLabel.Text = "Cooldown! Please wait..."
+        return
+    end
 
--- Progress Bar cho btn1
-local progressBar = Instance.new("Frame", btn1)
-progressBar.Size = UDim2.new(0, 0, 1, 0)
-progressBar.Position = UDim2.new(0, 0, 0, 0)
-progressBar.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-progressBar.BorderSizePixel = 0
-progressBar.ZIndex = 1
-round(progressBar, 12)
+    local eggName = eggDropdown.Text
+    local pets = petData[eggName]
 
--- Toggle Button
-local toggle = Instance.new("TextButton", gui)
-toggle.Size = UDim2.new(0, 48, 0, 48)
-toggle.Position = UDim2.new(0, 10, 1, -60)
-toggle.BackgroundColor3 = Color3.fromRGB(80, 80, 220)
-toggle.Text = "🧭"
-toggle.Font = Enum.Font.GothamBold
-toggle.TextSize = 24
-toggle.TextColor3 = Color3.fromRGB(255,255,255)
-round(toggle, 24)
-stroke(toggle)
-hover(toggle, Color3.fromRGB(80, 80, 220), Color3.fromRGB(110, 110, 250))
-toggle.Active = true
-toggle.Draggable = true
+    if not pets then
+        resultLabel.Text = "Invalid Egg Name!"
+        return
+    end
 
--- Logic
-local downloading = false
-local downloaded = false
+    -- Random logic with rare chance
+    local result = nil
+    local tries = 0
+    repeat
+        result = pets[math.random(1, #pets)]
+        tries += 1
+    until not rarePets[result] or math.random() < 0.2 or tries > 10
 
-local function alert(msg)
-	game.StarterGui:SetCore("SendNotification", {
-		Title = "⚠️ Notice", Text = msg, Duration = 3
-	})
-end
-
-btn1.MouseButton1Click:Connect(function()
-	if downloading or downloaded then return end
-	downloading = true
-	btn1.Text = "📥 Downloading... 0%"
-	progressBar.Size = UDim2.new(0, 0, 1, 0)
-	progressBar.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-
-	local total = 180
-	local elapsed = 0
-	while elapsed < total do
-		task.wait(1)
-		elapsed += 1
-		local percent = math.floor(elapsed / total * 100)
-		btn1.Text = "📥 Downloading... "..percent.."%"
-		progressBar:TweenSize(UDim2.new(percent / 100, 0, 1, 0), "Out", "Quad", 0.2, true)
-	end
-
-	downloading = false
-	downloaded = true
-	btn1.Text = "✅ Download Complete"
-	progressBar.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-end)
-
-for _, b in ipairs({btn2, btn3}) do
-	b.MouseButton1Click:Connect(function()
-		if not downloaded then
-			alert("Please complete Step 1 first!")
-		else
-			alert("❌ Resource error. Please rejoin.")
-		end
-	end)
-end
-
--- Fade Functions
-local function showGUI(state)
-	mainFrame.Visible = state
-	overlay.Visible = state
-	TweenService:Create(overlay, TweenInfo.new(0.3), {
-		BackgroundTransparency = state and 0.4 or 1
-	}):Play()
-	TweenService:Create(blur, TweenInfo.new(0.3), {
-		Size = state and 15 or 0
-	}):Play()
-end
-
--- Toggle Behavior
-toggle.MouseButton1Click:Connect(function()
-	showGUI(not mainFrame.Visible)
-end)
-
-closeBtn.MouseButton1Click:Connect(function()
-	showGUI(false)
+    resultLabel.Text = "🎉 " .. result .. " 🎉"
+    lastClick = tick()
 end)
