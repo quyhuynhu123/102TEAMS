@@ -1,11 +1,19 @@
--- 🧹 Xóa GUI lạ chứa Discord hoặc "Script Loading Please Wait!"
-for _, gui in ipairs(game.CoreGui:GetChildren()) do
-    if gui:IsA("ScreenGui") and (string.find(gui:GetFullName():lower(), "discord") or gui:FindFirstChildWhichIsA("TextLabel", true) and string.find(gui:FindFirstChildWhichIsA("TextLabel", true).Text:lower(), "please wait")) then
-        gui:Destroy()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+
+-- Xoá GUI khả nghi
+for _, gui in ipairs(game:GetDescendants()) do
+    if gui:IsA("TextLabel") or gui:IsA("TextButton") then
+        local text = gui.Text:lower()
+        if text:find("script loading please wait!") or text:find("discord.gg") then
+            gui:Destroy()
+        end
     end
 end
 
--- 📦 Dữ liệu pet theo từng loại trứng (có tỉ lệ hiếm cho 1 vài pet)
+-- Dữ liệu pet theo từng loại trứng
 local eggPetData = {
     ["Common Egg"] = {
         {Name = "Dog", Weight = 3},
@@ -24,7 +32,7 @@ local eggPetData = {
     },
     ["Bug Egg"] = {
         {Name = "Snail", Weight = 3},
-        {Name = "Caterpillar", Weight = 3},
+        {Name = "Bee", Weight = 3},
         {Name = "Mantis", Weight = 3},
         {Name = "Giant Ant", Weight = 3},
         {Name = "Dragonfly", Weight = 1},
@@ -40,9 +48,12 @@ local eggPetData = {
         {Name = "Red Fox", Weight = 1},
         {Name = "Grey Mouse", Weight = 3},
         {Name = "Squirrel", Weight = 3},
+        {Name = "Tiger", Weight = 3},
+        {Name = "Panda", Weight = 3},
     },
     ["Legendary Egg"] = {
         {Name = "Polar Bear", Weight = 1},
+        {Name = "Peacock", Weight = 3},
         {Name = "Turtle", Weight = 3},
         {Name = "Elephant", Weight = 3},
         {Name = "Leopard", Weight = 3},
@@ -52,6 +63,7 @@ local eggPetData = {
         {Name = "Stegosaurus", Weight = 3},
         {Name = "Triceratops", Weight = 3},
         {Name = "Pterodactyl", Weight = 3},
+        {Name = "Velociraptor", Weight = 3},
     },
     ["Rainbow Egg"] = {
         {Name = "Unicorn", Weight = 2},
@@ -61,94 +73,158 @@ local eggPetData = {
     },
 }
 
--- 🧠 Hàm chọn pet theo tỉ lệ
-local function getRandomPet(petList)
+-- Hàm chọn pet ngẫu nhiên theo tỉ lệ
+local function getRandomPet(pets)
     local totalWeight = 0
-    for _, pet in ipairs(petList) do
+    for _, pet in ipairs(pets) do
         totalWeight += pet.Weight
     end
     local rand = math.random() * totalWeight
     local sum = 0
-    for _, pet in ipairs(petList) do
+    for _, pet in ipairs(pets) do
         sum += pet.Weight
         if rand <= sum then
             return pet.Name
         end
     end
+    return pets[1].Name
 end
 
--- 🎨 Tạo GUI
-local player = game.Players.LocalPlayer
+-- GUI
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-gui.Name = "EggRandomizer"
+gui.Name = "PetRandomizerGUI"
 gui.ResetOnSpawn = false
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 200, 0, 100)
-frame.Position = UDim2.new(0.5, -100, 0.1, 0)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-frame.BorderSizePixel = 0
-frame.Active = true
-frame.Draggable = true
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0, 200, 0, 60)
+main.Position = UDim2.new(0.5, -100, 0, 100)
+main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+main.BackgroundTransparency = 0.3
+main.Active = true
+main.Draggable = true
 
-local toggle = Instance.new("TextButton", frame)
-toggle.Size = UDim2.new(0, 25, 0, 25)
-toggle.Position = UDim2.new(1, -30, 0, 5)
-toggle.Text = "-"
-toggle.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+local toggle = Instance.new("TextButton", main)
+toggle.Size = UDim2.new(1, 0, 0.5, 0)
+toggle.Position = UDim2.new(0, 0, 0, 0)
+toggle.Text = "Toggle Randomizer"
+toggle.TextColor3 = Color3.new(1, 1, 1)
+toggle.BackgroundTransparency = 1
+toggle.Font = Enum.Font.GothamBold
+toggle.TextScaled = true
 
-local randomBtn = Instance.new("TextButton", frame)
-randomBtn.Size = UDim2.new(0, 180, 0, 40)
-randomBtn.Position = UDim2.new(0.5, -90, 0.5, -20)
-randomBtn.Text = "Randomize Pets"
-randomBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+local timerLabel = Instance.new("TextLabel", main)
+timerLabel.Size = UDim2.new(1, 0, 0.5, 0)
+timerLabel.Position = UDim2.new(0, 0, 0.5, 0)
+timerLabel.BackgroundTransparency = 1
+timerLabel.TextColor3 = Color3.new(1, 1, 1)
+timerLabel.Font = Enum.Font.Gotham
+timerLabel.TextScaled = true
+timerLabel.Text = "Next random in: 30s"
 
--- 🕹 Toggle chức năng hiển thị
+local enabled = true
+local countdown = 30
+
 toggle.MouseButton1Click:Connect(function()
-    frame.Visible = not frame.Visible
+    enabled = not enabled
+    toggle.Text = enabled and "Randomizer ON" or "Randomizer OFF"
 end)
 
--- 🧭 Detect trứng xung quanh
-local function getNearbyEggs()
-    local eggs = {}
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("Model") and eggPetData[obj.Name] and obj:FindFirstChild("PrimaryPart") then
-            local distance = (obj.PrimaryPart.Position - player.Character.PrimaryPart.Position).Magnitude
-            if distance <= 50 then
-                table.insert(eggs, obj)
+-- Đếm ngược
+task.spawn(function()
+    while true do
+        wait(1)
+        if enabled then
+            countdown -= 1
+            if countdown <= 0 then
+                countdown = 30
+            end
+        end
+        timerLabel.Text = "Next random in: " .. countdown .. "s"
+    end
+end)
+
+-- Theo dõi trứng và random pet
+local lastRandom = {}
+RunService.RenderStepped:Connect(function()
+    if not enabled or countdown > 0 then return end
+
+    for _, egg in ipairs(workspace:GetDescendants()) do
+        if egg:IsA("Model") and egg:FindFirstChild("EggType") and (egg.PrimaryPart or egg:FindFirstChild("HumanoidRootPart")) then
+            local root = egg.PrimaryPart or egg:FindFirstChild("HumanoidRootPart")
+            local dist = (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and (player.Character.HumanoidRootPart.Position - root.Position).Magnitude) or 0
+
+            if dist <= 50 and (not lastRandom[egg] or tick() - lastRandom[egg] >= 30) then
+                local eggType = egg.EggType.Value
+                local petList = eggPetData[eggType]
+                if petList then
+                    local chosenPet = getRandomPet(petList)
+
+                    if egg:FindFirstChild("PetLabel") then
+                        egg.PetLabel:Destroy()
+                    end
+
+                    local label = Instance.new("BillboardGui", egg)
+                    label.Name = "PetLabel"
+                    label.Size = UDim2.new(0, 200, 0, 50)
+                    label.Adornee = root
+                    label.StudsOffset = Vector3.new(0, 3, 0)
+                    label.AlwaysOnTop = true
+
+                    local text = Instance.new("TextLabel", label)
+                    text.Size = UDim2.new(1, 0, 1, 0)
+                    text.BackgroundTransparency = 1
+                    text.Text = chosenPet
+                    text.TextScaled = true
+                    text.Font = Enum.Font.FredokaOne
+                    text.TextColor3 = Color3.new(1, 1, 0)
+
+                    lastRandom[egg] = tick()
+                end
             end
         end
     end
-    return eggs
-end
 
--- 🕒 Cooldown
-local canClick = true
-randomBtn.MouseButton1Click:Connect(function()
-    if not canClick then return end
-    canClick = false
+    countdown = 30
+end)
+--[[ 
+💥 FULL SCRIPT: Anti-Annoying GUI Cleaner
+📌 Tự động xóa GUI độc hại trong Grow a Garden hoặc bất kỳ game nào
+👁‍🗨 Tìm và loại bỏ các GUI chứa: "Script Loading Please Wait!", "discord.gg", "loading"
+]]
 
-    for _, egg in ipairs(getNearbyEggs()) do
-        local petName = getRandomPet(eggPetData[egg.Name])
-        local label = egg:FindFirstChild("PetLabel")
-        if not label then
-            label = Instance.new("BillboardGui", egg)
-            label.Name = "PetLabel"
-            label.Size = UDim2.new(0, 100, 0, 50)
-            label.StudsOffset = Vector3.new(0, 3, 0)
-            label.AlwaysOnTop = true
+-- Bắt đầu xóa GUI chứa nội dung không mong muốn
+local unwantedKeywords = {
+    "script loading please wait",
+    "discord.gg",
+    "loading"
+}
 
-            local text = Instance.new("TextLabel", label)
-            text.Size = UDim2.new(1, 0, 1, 0)
-            text.Text = petName
-            text.TextColor3 = Color3.fromRGB(255, 255, 255)
-            text.BackgroundTransparency = 1
-            text.TextScaled = true
-        else
-            label:FindFirstChildOfClass("TextLabel").Text = petName
+-- Hàm kiểm tra và xóa GUI độc hại
+local function removeUnwantedGUI()
+    for _, gui in ipairs(game:GetDescendants()) do
+        if gui:IsA("TextLabel") or gui:IsA("TextButton") then
+            local lowerText = string.lower(gui.Text)
+            for _, keyword in ipairs(unwantedKeywords) do
+                if string.find(lowerText, keyword) then
+                    local parentGui = gui:FindFirstAncestorWhichIsA("ScreenGui")
+                    if parentGui and parentGui.Parent == game.CoreGui or parentGui.Parent == game.Players.LocalPlayer:FindFirstChild("PlayerGui") then
+                        print("🧹 Removing ScreenGui:", parentGui.Name)
+                        parentGui:Destroy()
+                    else
+                        print("🧹 Removing GUI Element:", gui.Name)
+                        gui:Destroy()
+                    end
+                    break
+                end
+            end
         end
     end
+end
 
-    task.wait(5)
-    canClick = true
+-- Tự động chạy và lặp lại
+task.spawn(function()
+    while true do
+        pcall(removeUnwantedGUI)
+        task.wait(1) -- Lặp lại mỗi giây
+    end
 end)
