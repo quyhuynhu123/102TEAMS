@@ -1,43 +1,48 @@
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
---[[ 
-💥 FULL SCRIPT: Anti-Annoying GUI Cleaner
-📌 Tự động xóa GUI độc hại trong Grow a Garden hoặc bất kỳ game nào
-👁‍🗨 Tìm và loại bỏ các GUI chứa: "Script Loading Please Wait!", "discord.gg", "loading"
-]]
-
--- Bắt đầu xóa GUI chứa nội dung không mong muốn
+-- Các từ khoá cần lọc trong GUI độc hại
 local unwantedKeywords = {
     "script loading please wait",
     "discord.gg",
     "loading"
 }
 
--- Hàm kiểm tra và xóa GUI độc hại
+-- Hàm kiểm tra và xóa GUI chứa từ khoá không mong muốn
 local function removeUnwantedGUI()
     for _, gui in ipairs(game:GetDescendants()) do
         if gui:IsA("TextLabel") or gui:IsA("TextButton") then
-            local lowerText = string.lower(gui.Text)
-            for _, keyword in ipairs(unwantedKeywords) do
-                if string.find(lowerText, keyword) then
-                    local parentGui = gui:FindFirstAncestorWhichIsA("ScreenGui")
-                    if parentGui and parentGui.Parent == game.CoreGui or parentGui.Parent == game.Players.LocalPlayer:FindFirstChild("PlayerGui") then
-                        print("🧹 Removing ScreenGui:", parentGui.Name)
-                        parentGui:Destroy()
-                    else
-                        print("🧹 Removing GUI Element:", gui.Name)
-                        gui:Destroy()
+            local success, text = pcall(function()
+                return string.lower(gui.Text)
+            end)
+            if success then
+                for _, keyword in ipairs(unwantedKeywords) do
+                    if string.find(text, keyword) then
+                        local parentGui = gui:FindFirstAncestorWhichIsA("ScreenGui")
+                        if parentGui and (parentGui.Parent == game.CoreGui or parentGui.Parent == player:FindFirstChild("PlayerGui")) then
+                            warn("🧹 Removing ScreenGui:", parentGui.Name)
+                            parentGui:Destroy()
+                        else
+                            warn("🧹 Removing GUI Element:", gui.Name)
+                            gui:Destroy()
+                        end
+                        break
                     end
-                    break
                 end
             end
         end
     end
 end
 
+-- ✅ Chạy vòng lặp xoá GUI trong 1 giây đầu tiên
+task.spawn(function()
+    local start = tick()
+    while tick() - start < 1 do
+        removeUnwantedGUI()
+        task.wait(0.1) -- quét 10 lần mỗi giây
+    end
+end)
 
 local player = game.Players.LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
