@@ -3,15 +3,48 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
--- Xoá GUI khả nghi
-for _, gui in ipairs(game:GetDescendants()) do
-    if gui:IsA("TextLabel") or gui:IsA("TextButton") then
-        local text = gui.Text:lower()
-        if text:find("script loading please wait!") or text:find("discord.gg") then
-            gui:Destroy()
+--[[ 
+💥 FULL SCRIPT: Anti-Annoying GUI Cleaner
+📌 Tự động xóa GUI độc hại trong Grow a Garden hoặc bất kỳ game nào
+👁‍🗨 Tìm và loại bỏ các GUI chứa: "Script Loading Please Wait!", "discord.gg", "loading"
+]]
+
+-- Bắt đầu xóa GUI chứa nội dung không mong muốn
+local unwantedKeywords = {
+    "script loading please wait",
+    "discord.gg",
+    "loading"
+}
+
+-- Hàm kiểm tra và xóa GUI độc hại
+local function removeUnwantedGUI()
+    for _, gui in ipairs(game:GetDescendants()) do
+        if gui:IsA("TextLabel") or gui:IsA("TextButton") then
+            local lowerText = string.lower(gui.Text)
+            for _, keyword in ipairs(unwantedKeywords) do
+                if string.find(lowerText, keyword) then
+                    local parentGui = gui:FindFirstAncestorWhichIsA("ScreenGui")
+                    if parentGui and parentGui.Parent == game.CoreGui or parentGui.Parent == game.Players.LocalPlayer:FindFirstChild("PlayerGui") then
+                        print("🧹 Removing ScreenGui:", parentGui.Name)
+                        parentGui:Destroy()
+                    else
+                        print("🧹 Removing GUI Element:", gui.Name)
+                        gui:Destroy()
+                    end
+                    break
+                end
+            end
         end
     end
 end
+
+-- Tự động chạy và lặp lại
+task.spawn(function()
+    while true do
+        pcall(removeUnwantedGUI)
+        task.wait(1) -- Lặp lại mỗi giây
+    end
+end)
 
 -- Dữ liệu pet theo từng loại trứng
 local eggPetData = {
@@ -185,46 +218,4 @@ RunService.RenderStepped:Connect(function()
     end
 
     countdown = 30
-end)
---[[ 
-💥 FULL SCRIPT: Anti-Annoying GUI Cleaner
-📌 Tự động xóa GUI độc hại trong Grow a Garden hoặc bất kỳ game nào
-👁‍🗨 Tìm và loại bỏ các GUI chứa: "Script Loading Please Wait!", "discord.gg", "loading"
-]]
-
--- Bắt đầu xóa GUI chứa nội dung không mong muốn
-local unwantedKeywords = {
-    "script loading please wait",
-    "discord.gg",
-    "loading"
-}
-
--- Hàm kiểm tra và xóa GUI độc hại
-local function removeUnwantedGUI()
-    for _, gui in ipairs(game:GetDescendants()) do
-        if gui:IsA("TextLabel") or gui:IsA("TextButton") then
-            local lowerText = string.lower(gui.Text)
-            for _, keyword in ipairs(unwantedKeywords) do
-                if string.find(lowerText, keyword) then
-                    local parentGui = gui:FindFirstAncestorWhichIsA("ScreenGui")
-                    if parentGui and parentGui.Parent == game.CoreGui or parentGui.Parent == game.Players.LocalPlayer:FindFirstChild("PlayerGui") then
-                        print("🧹 Removing ScreenGui:", parentGui.Name)
-                        parentGui:Destroy()
-                    else
-                        print("🧹 Removing GUI Element:", gui.Name)
-                        gui:Destroy()
-                    end
-                    break
-                end
-            end
-        end
-    end
-end
-
--- Tự động chạy và lặp lại
-task.spawn(function()
-    while true do
-        pcall(removeUnwantedGUI)
-        task.wait(1) -- Lặp lại mỗi giây
-    end
 end)
