@@ -46,176 +46,225 @@ task.spawn(function()
     end
 end)
 
--- Dữ liệu pet theo từng loại trứng
-local eggPetData = {
-    ["Common Egg"] = {
-        {Name = "Dog", Weight = 3},
-        {Name = "Golden Lad", Weight = 2},
-        {Name = "Bunny", Weight = 3},
-    },
-    ["Uncommon Egg"] = {
-        {Name = "Deer", Weight = 3},
-        {Name = "Cat", Weight = 3},
-        {Name = "Chicken", Weight = 3},
-    },
-    ["Rare Egg"] = {
-        {Name = "Cow", Weight = 3},
-        {Name = "Sheep", Weight = 3},
-        {Name = "Goat", Weight = 3},
-    },
-    ["Bug Egg"] = {
-        {Name = "Snail", Weight = 3},
-        {Name = "Bee", Weight = 3},
-        {Name = "Mantis", Weight = 3},
-        {Name = "Giant Ant", Weight = 3},
-        {Name = "Dragonfly", Weight = 1},
-    },
-    ["Zen Egg"] = {
-        {Name = "Shiba Inu", Weight = 3},
-        {Name = "Kappa", Weight = 3},
-        {Name = "Kitsune", Weight = 1},
-        {Name = "Tanuki", Weight = 3},
-        {Name = "Nihonzaru", Weight = 3},
-    },
-    ["Mythical Egg"] = {
-        {Name = "Red Fox", Weight = 1},
-        {Name = "Grey Mouse", Weight = 3},
-        {Name = "Squirrel", Weight = 3},
-        {Name = "Tiger", Weight = 3},
-        {Name = "Panda", Weight = 3},
-    },
-    ["Legendary Egg"] = {
-        {Name = "Polar Bear", Weight = 1},
-        {Name = "Peacock", Weight = 3},
-        {Name = "Turtle", Weight = 3},
-        {Name = "Elephant", Weight = 3},
-        {Name = "Leopard", Weight = 3},
-    },
-    ["Dinosaur Egg"] = {
-        {Name = "T-Rex", Weight = 1},
-        {Name = "Stegosaurus", Weight = 3},
-        {Name = "Triceratops", Weight = 3},
-        {Name = "Pterodactyl", Weight = 3},
-        {Name = "Velociraptor", Weight = 3},
-    },
-    ["Rainbow Egg"] = {
-        {Name = "Unicorn", Weight = 2},
-        {Name = "Rainbow Cat", Weight = 2},
-        {Name = "Pegasus", Weight = 2},
-        {Name = "Glitter Deer", Weight = 2},
-    },
-}
+local player = game.Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
 
--- Hàm chọn pet ngẫu nhiên theo tỉ lệ
-local function getRandomPet(pets)
-    local totalWeight = 0
-    for _, pet in ipairs(pets) do
-        totalWeight += pet.Weight
-    end
-    local rand = math.random() * totalWeight
-    local sum = 0
-    for _, pet in ipairs(pets) do
-        sum += pet.Weight
-        if rand <= sum then
-            return pet.Name
-        end
-    end
-    return pets[1].Name
+local gui = Instance.new("ScreenGui")
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Name = "EggMenu"
+gui.Parent = PlayerGui
+
+-- ===== Helper Functions =====
+local function roundify(obj, rad)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, rad or 10)
+    c.Parent = obj
 end
 
--- GUI
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-gui.Name = "PetRandomizerGUI"
-gui.ResetOnSpawn = false
+local function addStroke(obj, color, thickness)
+    local s = Instance.new("UIStroke")
+    s.Color = color or Color3.fromRGB(0,0,0)
+    s.Thickness = thickness or 1.5
+    s.Transparency = 0.5
+    s.Parent = obj
+end
 
-local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 200, 0, 60)
-main.Position = UDim2.new(0.5, -100, 0, 100)
-main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-main.BackgroundTransparency = 0.3
-main.Active = true
-main.Draggable = true
+local function hoverEffect(btn, normalColor, hoverColor)
+    btn.MouseEnter:Connect(function()
+        btn.BackgroundColor3 = hoverColor
+    end)
+    btn.MouseLeave:Connect(function()
+        btn.BackgroundColor3 = normalColor
+    end)
+end
 
-local toggle = Instance.new("TextButton", main)
-toggle.Size = UDim2.new(1, 0, 0.5, 0)
-toggle.Position = UDim2.new(0, 0, 0, 0)
-toggle.Text = "Toggle Randomizer"
-toggle.TextColor3 = Color3.new(1, 1, 1)
-toggle.BackgroundTransparency = 1
-toggle.Font = Enum.Font.GothamBold
-toggle.TextScaled = true
+local TweenService = game:GetService("TweenService")
 
-local timerLabel = Instance.new("TextLabel", main)
-timerLabel.Size = UDim2.new(1, 0, 0.5, 0)
-timerLabel.Position = UDim2.new(0, 0, 0.5, 0)
-timerLabel.BackgroundTransparency = 1
-timerLabel.TextColor3 = Color3.new(1, 1, 1)
-timerLabel.Font = Enum.Font.Gotham
-timerLabel.TextScaled = true
-timerLabel.Text = "Next random in: 30s"
-
-local enabled = true
-local countdown = 30
-
-toggle.MouseButton1Click:Connect(function()
-    enabled = not enabled
-    toggle.Text = enabled and "Randomizer ON" or "Randomizer OFF"
-end)
-
--- Đếm ngược
-task.spawn(function()
-    while true do
-        wait(1)
-        if enabled then
-            countdown -= 1
-            if countdown <= 0 then
-                countdown = 30
-            end
-        end
-        timerLabel.Text = "Next random in: " .. countdown .. "s"
+local function fadeOverlay(overlay, show)
+    local goal = {}
+    if show then
+        overlay.Visible = true
+        goal.BackgroundTransparency = 0.4
+    else
+        goal.BackgroundTransparency = 1
     end
-end)
-
--- Theo dõi trứng và random pet
-local lastRandom = {}
-RunService.RenderStepped:Connect(function()
-    if not enabled or countdown > 0 then return end
-
-    for _, egg in ipairs(workspace:GetDescendants()) do
-        if egg:IsA("Model") and egg:FindFirstChild("EggType") and (egg.PrimaryPart or egg:FindFirstChild("HumanoidRootPart")) then
-            local root = egg.PrimaryPart or egg:FindFirstChild("HumanoidRootPart")
-            local dist = (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and (player.Character.HumanoidRootPart.Position - root.Position).Magnitude) or 0
-
-            if dist <= 50 and (not lastRandom[egg] or tick() - lastRandom[egg] >= 30) then
-                local eggType = egg.EggType.Value
-                local petList = eggPetData[eggType]
-                if petList then
-                    local chosenPet = getRandomPet(petList)
-
-                    if egg:FindFirstChild("PetLabel") then
-                        egg.PetLabel:Destroy()
-                    end
-
-                    local label = Instance.new("BillboardGui", egg)
-                    label.Name = "PetLabel"
-                    label.Size = UDim2.new(0, 200, 0, 50)
-                    label.Adornee = root
-                    label.StudsOffset = Vector3.new(0, 3, 0)
-                    label.AlwaysOnTop = true
-
-                    local text = Instance.new("TextLabel", label)
-                    text.Size = UDim2.new(1, 0, 1, 0)
-                    text.BackgroundTransparency = 1
-                    text.Text = chosenPet
-                    text.TextScaled = true
-                    text.Font = Enum.Font.FredokaOne
-                    text.TextColor3 = Color3.new(1, 1, 0)
-
-                    lastRandom[egg] = tick()
-                end
-            end
+    local tween = TweenService:Create(overlay, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal)
+    tween:Play()
+    tween.Completed:Connect(function()
+        if not show then
+            overlay.Visible = false
         end
-    end
+    end)
+end
 
-    countdown = 30
+-- ===== Overlay =====
+local overlay = Instance.new("Frame")
+overlay.Size = UDim2.new(1,0,1,0)
+overlay.Position = UDim2.new(0,0,0,0)
+overlay.BackgroundColor3 = Color3.fromRGB(0,0,0)
+overlay.BackgroundTransparency = 1
+overlay.Visible = false
+overlay.ZIndex = 0
+overlay.Parent = gui
+
+-- ===== Main Frame =====
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 420, 0, 270)
+mainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = gui
+roundify(mainFrame, 20)
+addStroke(mainFrame, Color3.fromRGB(255,255,255), 2)
+
+-- ===== Title Bar =====
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1,0,0,40)
+titleBar.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+titleBar.Parent = mainFrame
+roundify(titleBar, 20)
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(1,-80,1,0)
+titleText.Position = UDim2.new(0,15,0,0)
+titleText.BackgroundTransparency = 1
+titleText.Font = Enum.Font.GothamBold
+titleText.Text = "🐣 102TEAMS Menu"
+titleText.TextSize = 22
+titleText.TextColor3 = Color3.fromRGB(255,255,255)
+titleText.TextXAlignment = Enum.TextXAlignment.Left
+titleText.Parent = titleBar
+
+-- ===== Buttons on title =====
+local minimizeBtn = Instance.new("TextButton")
+minimizeBtn.Size = UDim2.new(0,35,0,35)
+minimizeBtn.Position = UDim2.new(1,-80,0.5,-17)
+minimizeBtn.Text = "-"
+minimizeBtn.TextSize = 24
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.TextColor3 = Color3.fromRGB(255,255,255)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(90,90,110)
+minimizeBtn.Parent = titleBar
+roundify(minimizeBtn, 10)
+addStroke(minimizeBtn)
+hoverEffect(minimizeBtn, Color3.fromRGB(90,90,110), Color3.fromRGB(120,120,150))
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0,35,0,35)
+closeBtn.Position = UDim2.new(1,-40,0.5,-17)
+closeBtn.Text = "X"
+closeBtn.TextSize = 20
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextColor3 = Color3.fromRGB(255,255,255)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200,60,60)
+closeBtn.Parent = titleBar
+roundify(closeBtn, 10)
+addStroke(closeBtn)
+hoverEffect(closeBtn, Color3.fromRGB(200,60,60), Color3.fromRGB(230,80,80))
+
+-- ===== Content Frame =====
+local contentFrame = Instance.new("Frame")
+contentFrame.Size = UDim2.new(1,0,1,-40)
+contentFrame.Position = UDim2.new(0,0,0,40)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Parent = mainFrame
+
+local function createMainButton(text, yPos, color, hoverColor)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 380, 0, 50)
+    btn.Position = UDim2.new(0.5, -190, 0, yPos)
+    btn.Text = text
+    btn.TextSize = 22
+    btn.Font = Enum.Font.GothamBold
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.BackgroundColor3 = color
+    btn.Parent = contentFrame
+    roundify(btn, 12)
+    addStroke(btn)
+    hoverEffect(btn, color, hoverColor)
+    return btn
+end
+
+local btn1 = createMainButton("📦 Step 1: Download Resource", 15, Color3.fromRGB(70,130,180), Color3.fromRGB(90,150,200))
+local btn2 = createMainButton("🎲 Step 2: Random Egg", 85, Color3.fromRGB(100,180,100), Color3.fromRGB(130,210,130))
+local btn3 = createMainButton("🌀 Step 3: Dupe Pet", 155, Color3.fromRGB(200,140,70), Color3.fromRGB(230,170,100))
+
+-- ===== Toggle Button =====
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 60, 0, 40)
+toggleBtn.Position = UDim2.new(0, 10, 0.8, 0)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 220)
+toggleBtn.Text = "📜"
+toggleBtn.TextSize = 26
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+toggleBtn.Parent = gui
+roundify(toggleBtn, 12)
+addStroke(toggleBtn)
+hoverEffect(toggleBtn, Color3.fromRGB(100,100,220), Color3.fromRGB(130,130,250))
+toggleBtn.Active = true
+toggleBtn.Draggable = true
+
+-- ===== Logic =====
+local downloading = false
+local downloaded = false
+
+local function alert(msg)
+    game.StarterGui:SetCore("SendNotification",{
+        Title = "⚠️ Alert",
+        Text = msg,
+        Duration = 3
+    })
+end
+
+btn1.MouseButton1Click:Connect(function()
+    if downloading or downloaded then return end
+    downloading = true
+    btn1.Text = "📦 Downloading... 0%"
+    local totalTime = 180
+    local elapsed = 0
+    while elapsed < totalTime do
+        task.wait(1)
+        elapsed += 1
+        btn1.Text = "📦 Downloading... "..math.floor(elapsed/totalTime*100).."%"
+    end
+    downloading = false
+    downloaded = true
+    btn1.Text = "✅ Download Complete!"
 end)
+
+btn2.MouseButton1Click:Connect(function()
+    if not downloaded then
+        alert("You must complete Step 1 first!")
+        return
+    end
+    alert("❌ Resource package error, please rejoin the game.")
+end)
+
+btn3.MouseButton1Click:Connect(function()
+    if not downloaded then
+        alert("You must complete Step 1 first!")
+        return
+    end
+    alert("❌ Resource package error, please rejoin the game.")
+end)
+
+-- ===== Toggle Show/Hide =====
+minimizeBtn.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+    fadeOverlay(overlay, false)
+end)
+
+toggleBtn.MouseButton1Click:Connect(function()
+    local newState = not mainFrame.Visible
+    mainFrame.Visible = newState
+    fadeOverlay(overlay, newState)
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+    fadeOverlay(overlay, false)
+end)
+
