@@ -1,111 +1,172 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
 
--- Xóa GUI lạ nếu tồn tại
+-- 🧹 Xoá GUI lạ
 for _, gui in ipairs(PlayerGui:GetChildren()) do
-    if gui:IsA("ScreenGui") and gui:FindFirstChildWhichIsA("TextLabel", true) and gui:FindFirstChildWhichIsA("TextLabel", true).Text:find("Script Loading Please Wait") then
-        gui:Destroy()
+    if gui:IsA("ScreenGui") and gui:FindFirstChildWhichIsA("TextLabel", true) then
+        if string.find(gui:FindFirstChildWhichIsA("TextLabel", true).Text, "Script Loading Please Wait!") then
+            gui:Destroy()
+        end
     end
 end
 
--- Pet Database
-local petData = {
-    ["Common Egg"] = {"Dog", "Golden Lad", "Bunny"},
-    ["Uncommon Egg"] = {"Deer", "Cat", "Chicken"},
-    ["Rare Egg"] = {"Cow", "Sheep", "Goat"},
-    ["Bug Egg"] = {"Snail", "Bee", "Mantis", "Giant Ant", "Dragonfly"},
-    ["Zen Egg"] = {"Shiba Inu", "Kappa", "Kitsune", "Tanuki", "Nihonzaru"},
-    ["Mythical Egg"] = {"Red Fox", "Grey Mouse", "Squirrel", "Tiger", "Panda"},
-    ["Legendary Egg"] = {"Polar Bear", "Peacock", "Turtle", "Elephant", "Leopard"},
-    ["Dinosaur Egg"] = {"T-Rex", "Stegosaurus", "Triceratops", "Pterodactyl", "Velociraptor"},
-    ["Rainbow Egg"] = {"Unicorn", "Rainbow Cat", "Pegasus", "Glitter Deer"},
+-- 📦 Dữ liệu pet theo từng loại trứng
+local eggPetData = {
+    ["Common Egg"] = {
+        {Name = "Dog", Weight = 3},
+        {Name = "Golden Lad", Weight = 2},
+        {Name = "Bunny", Weight = 3},
+    },
+    ["Uncommon Egg"] = {
+        {Name = "Deer", Weight = 3},
+        {Name = "Cat", Weight = 3},
+        {Name = "Chicken", Weight = 3},
+    },
+    ["Rare Egg"] = {
+        {Name = "Cow", Weight = 3},
+        {Name = "Sheep", Weight = 3},
+        {Name = "Goat", Weight = 3},
+    },
+    ["Bug Egg"] = {
+        {Name = "Snail", Weight = 3},
+        {Name = "Caterpillar", Weight = 3},
+        {Name = "Mantis", Weight = 3},
+        {Name = "Giant Ant", Weight = 3},
+        {Name = "Dragonfly", Weight = 1},
+    },
+    ["Zen Egg"] = {
+        {Name = "Shiba Inu", Weight = 3},
+        {Name = "Kappa", Weight = 3},
+        {Name = "Kitsune", Weight = 1},
+        {Name = "Tanuki", Weight = 3},
+        {Name = "Nihonzaru", Weight = 3},
+    },
+    ["Mythical Egg"] = {
+        {Name = "Red Fox", Weight = 1},
+        {Name = "Grey Mouse", Weight = 3},
+        {Name = "Squirrel", Weight = 3},
+    },
+    ["Legendary Egg"] = {
+        {Name = "Polar Bear", Weight = 1},
+        {Name = "Turtle", Weight = 3},
+        {Name = "Elephant", Weight = 3},
+        {Name = "Leopard", Weight = 3},
+    },
+    ["Dinosaur Egg"] = {
+        {Name = "T-Rex", Weight = 1},
+        {Name = "Stegosaurus", Weight = 3},
+        {Name = "Triceratops", Weight = 3},
+        {Name = "Pterodactyl", Weight = 3},
+    },
+    ["Rainbow Egg"] = {
+        {Name = "Unicorn", Weight = 2},
+        {Name = "Rainbow Cat", Weight = 2},
+        {Name = "Pegasus", Weight = 2},
+        {Name = "Glitter Deer", Weight = 2},
+    },
 }
 
--- Pet hiếm có tỉ lệ thấp hơn
-local rarePets = {
-    ["Dragonfly"] = true,
-    ["Kitsune"] = true,
-    ["Red Fox"] = true,
-    ["Polar Bear"] = true,
-    ["T-Rex"] = true,
-}
+-- 🧲 Hàm chọn pet theo tỉ lệ
+local function chooseWeightedPet(pets)
+    local totalWeight = 0
+    for _, pet in ipairs(pets) do
+        totalWeight += pet.Weight
+    end
+    local rand = math.random() * totalWeight
+    local cumulative = 0
+    for _, pet in ipairs(pets) do
+        cumulative += pet.Weight
+        if rand <= cumulative then
+            return pet.Name
+        end
+    end
+end
 
--- GUI Setup
+-- 🔍 Lấy tất cả trứng trong phạm vi 50 studs
+local function getNearbyEggs()
+    local eggsInRange = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and eggPetData[obj.Name] and obj:FindFirstChild("PrimaryPart") then
+            if (obj.PrimaryPart.Position - player.Character.PrimaryPart.Position).Magnitude <= 50 then
+                table.insert(eggsInRange, obj)
+            end
+        end
+    end
+    return eggsInRange
+end
+
+-- 🎲 Random và hiển thị tên pet
+local lastUsed = 0
+local function randomize()
+    if tick() - lastUsed < 5 then return end
+    lastUsed = tick()
+    for _, egg in ipairs(getNearbyEggs()) do
+        local petName = chooseWeightedPet(eggPetData[egg.Name])
+        local label = egg:FindFirstChild("PetLabel")
+        if not label then
+            label = Instance.new("BillboardGui", egg)
+            label.Name = "PetLabel"
+            label.Size = UDim2.new(0, 200, 0, 50)
+            label.StudsOffset = Vector3.new(0, 3, 0)
+            label.AlwaysOnTop = true
+            local text = Instance.new("TextLabel", label)
+            text.Size = UDim2.new(1, 0, 1, 0)
+            text.BackgroundTransparency = 1
+            text.TextColor3 = Color3.new(1, 1, 1)
+            text.TextScaled = true
+            text.Font = Enum.Font.GothamBold
+        end
+        label.TextLabel.Text = petName
+    end
+end
+
+-- 🖥️ GUI
 local gui = Instance.new("ScreenGui", PlayerGui)
-gui.Name = "PetRandomizerGUI"
+gui.Name = "PetRandomizerUI"
 gui.ResetOnSpawn = false
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 300, 0, 180)
-frame.Position = UDim2.new(0.5, -150, 0.5, -90)
-frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-frame.BorderSizePixel = 0
-frame.BackgroundTransparency = 0.2
-frame.Active = true
-frame.Draggable = true
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.Size = UDim2.new(0, 250, 0, 100)
+mainFrame.Position = UDim2.new(0.5, -125, 0.5, -50)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Draggable = true
+mainFrame.Active = true
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 30)
-title.Text = "🎲 Pet Randomizer"
-title.Font = Enum.Font.GothamBold
-title.TextColor3 = Color3.new(1, 1, 1)
-title.BackgroundTransparency = 1
-title.TextSize = 18
+local toggleButton = Instance.new("TextButton", mainFrame)
+toggleButton.Size = UDim2.new(0, 30, 0, 30)
+toggleButton.Position = UDim2.new(1, -35, 0, 5)
+toggleButton.Text = "-"
+toggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
 
-local eggDropdown = Instance.new("TextBox", frame)
-eggDropdown.PlaceholderText = "Type Egg Name (e.g., Zen Egg)"
-eggDropdown.Text = ""
-eggDropdown.Size = UDim2.new(1, -20, 0, 30)
-eggDropdown.Position = UDim2.new(0, 10, 0, 40)
-eggDropdown.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-eggDropdown.TextColor3 = Color3.new(0, 0, 0)
-eggDropdown.ClearTextOnFocus = false
-
-local resultLabel = Instance.new("TextLabel", frame)
-resultLabel.Size = UDim2.new(1, -20, 0, 50)
-resultLabel.Position = UDim2.new(0, 10, 0, 80)
-resultLabel.BackgroundTransparency = 1
-resultLabel.Text = "Result will appear here"
-resultLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-resultLabel.Font = Enum.Font.GothamBold
-resultLabel.TextSize = 20
-
-local randomButton = Instance.new("TextButton", frame)
-randomButton.Text = "Random!"
-randomButton.Size = UDim2.new(1, -20, 0, 30)
-randomButton.Position = UDim2.new(0, 10, 0, 135)
-randomButton.BackgroundColor3 = Color3.fromRGB(80, 160, 255)
+local randomButton = Instance.new("TextButton", mainFrame)
+randomButton.Size = UDim2.new(0, 200, 0, 40)
+randomButton.Position = UDim2.new(0.5, -100, 0.5, -20)
+randomButton.Text = "Random Pet"
+randomButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 randomButton.TextColor3 = Color3.new(1, 1, 1)
-randomButton.Font = Enum.Font.Gotham
-randomButton.TextSize = 16
+randomButton.Font = Enum.Font.GothamBold
+randomButton.TextScaled = true
 
--- Cooldown logic
-local lastClick = 0
-randomButton.MouseButton1Click:Connect(function()
-    if tick() - lastClick < 5 then
-        resultLabel.Text = "Cooldown! Please wait..."
-        return
+randomButton.MouseButton1Click:Connect(randomize)
+
+toggleButton.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+    wait(0.2)
+    toggleButton.Parent = gui
+    toggleButton.Position = UDim2.new(0, 10, 0, 10)
+end)
+
+toggleButton.MouseButton1Click:Connect(function()
+    if mainFrame.Visible then
+        mainFrame.Visible = false
+    else
+        mainFrame.Visible = true
+        toggleButton.Parent = mainFrame
+        toggleButton.Position = UDim2.new(1, -35, 0, 5)
     end
-
-    local eggName = eggDropdown.Text
-    local pets = petData[eggName]
-
-    if not pets then
-        resultLabel.Text = "Invalid Egg Name!"
-        return
-    end
-
-    -- Random logic with rare chance
-    local result = nil
-    local tries = 0
-    repeat
-        result = pets[math.random(1, #pets)]
-        tries += 1
-    until not rarePets[result] or math.random() < 0.2 or tries > 10
-
-    resultLabel.Text = "🎉 " .. result .. " 🎉"
-    lastClick = tick()
 end)
