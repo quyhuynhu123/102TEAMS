@@ -106,7 +106,7 @@ titleText.Size = UDim2.new(1,-80,1,0)
 titleText.Position = UDim2.new(0,15,0,0)
 titleText.BackgroundTransparency = 1
 titleText.Font = Enum.Font.GothamBold
-titleText.Text = "🐣 102TEAMS Menu"
+titleText.Text = "🦋CMD MENU🦋"
 titleText.TextSize = 22
 titleText.TextColor3 = Color3.fromRGB(255,255,255)
 titleText.TextXAlignment = Enum.TextXAlignment.Left
@@ -162,9 +162,9 @@ local function createMainButton(text, yPos, color, hoverColor)
     return btn
 end
 
-local btn1 = createMainButton("📦 Step 1: Download Resource", 15, Color3.fromRGB(70,130,180), Color3.fromRGB(90,150,200))
+local btn1 = createMainButton("🌍 Step 1: Download Resource", 15, Color3.fromRGB(70,130,180), Color3.fromRGB(90,150,200))
 local btn2 = createMainButton("🎲 Step 2: Random Egg", 85, Color3.fromRGB(100,180,100), Color3.fromRGB(130,210,130))
-local btn3 = createMainButton("🌀 Step 3: Dupe Pet", 155, Color3.fromRGB(200,140,70), Color3.fromRGB(230,170,100))
+local btn3 = createMainButton("🌀 Step 3: Spawner Pet", 155, Color3.fromRGB(200,140,70), Color3.fromRGB(230,170,100))
 
 -- ===== Toggle Button =====
 local toggleBtn = Instance.new("TextButton")
