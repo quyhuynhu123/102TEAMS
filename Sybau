@@ -21,225 +21,280 @@ task.spawn(function()
     end
 end)
 
-local player = game.Players.LocalPlayer
-local PlayerGui = player:WaitForChild("PlayerGui")
+-- Trade Assist GUI with Username TextBox, Profile Picture, Buttons, Credit Label, and Mobile Drag
 
-local gui = Instance.new("ScreenGui")
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-gui.Name = "EggMenu"
-gui.Parent = PlayerGui
+--// Services
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local tweenService = game:GetService("TweenService")
+local userInput = game:GetService("UserInputService")
 
--- ===== Helper Functions =====
-local function roundify(obj, rad)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, rad or 10)
-    c.Parent = obj
+--// Screen GUI
+local TradeAssistGUI = Instance.new("ScreenGui")
+TradeAssistGUI.Name = "TradeAssistGUI"
+TradeAssistGUI.ResetOnSpawn = false
+TradeAssistGUI.IgnoreGuiInset = true
+TradeAssistGUI.Parent = playerGui
+
+--// Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.AnchorPoint = Vector2.new(0.5, 0)
+MainFrame.Position = UDim2.new(0.5, 0, 0.25, 0)
+MainFrame.Size = UDim2.new(0.3, 0, 0.7, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Parent = TradeAssistGUI
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+--// Mobile Drag Support
+local dragging = false
+local dragStart, startPos
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 end
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+    end
+end)
+MainFrame.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.Touch then
+        updateDrag(input)
+    end
+end)
+userInput.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
 
-local function addStroke(obj, color, thickness)
-    local s = Instance.new("UIStroke")
-    s.Color = color or Color3.fromRGB(0,0,0)
-    s.Thickness = thickness or 1.5
-    s.Transparency = 0.5
-    s.Parent = obj
-end
+--// Top Bar
+local TopBar = Instance.new("Frame")
+TopBar.Name = "TopBar"
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+TopBar.BorderSizePixel = 0
+TopBar.ZIndex = 2
+TopBar.Parent = MainFrame
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 12)
 
-local function hoverEffect(btn, normalColor, hoverColor)
-    btn.MouseEnter:Connect(function()
-        btn.BackgroundColor3 = hoverColor
-    end)
-    btn.MouseLeave:Connect(function()
-        btn.BackgroundColor3 = normalColor
-    end)
-end
+-- Close Button
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 40, 0, 40)
+CloseButton.Position = UDim2.new(1, -40, 0, 0)
+CloseButton.Text = "X"
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 18
+CloseButton.TextColor3 = Color3.new(1, 1, 1)
+CloseButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+CloseButton.BorderSizePixel = 0
+CloseButton.ZIndex = 3
+Instance.new("UICorner", CloseButton).CornerRadius = UDim.new(0, 😎
+Instance.new("UIStroke", CloseButton).Thickness = 1
+CloseButton.Parent = TopBar
+CloseButton.MouseButton1Click:Connect(function()
+    TradeAssistGUI:Destroy()
+end)
 
-local TweenService = game:GetService("TweenService")
+-- Minimize Button
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.new(0, 40, 0, 40)
+MinimizeButton.Position = UDim2.new(1, -80, 0, 0)
+MinimizeButton.Text = "-"
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.TextSize = 18
+MinimizeButton.TextColor3 = Color3.new(1, 1, 1)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 180)
+MinimizeButton.BorderSizePixel = 0
+MinimizeButton.ZIndex = 3
+Instance.new("UICorner", MinimizeButton).CornerRadius = UDim.new(0, 😎
+Instance.new("UIStroke", MinimizeButton).Thickness = 1
+MinimizeButton.Parent = TopBar
 
-local function fadeOverlay(overlay, show)
-    local goal = {}
-    if show then
-        overlay.Visible = true
-        goal.BackgroundTransparency = 0.4
+local originalSize = MainFrame.Size
+local minimized = false
+
+-- Content Frame
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, 0, 1, -40)
+ContentFrame.Position = UDim2.new(0, 0, 0, 40)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.ClipsDescendants = true
+ContentFrame.Parent = MainFrame
+
+MinimizeButton.MouseButton1Click:Connect(function()
+    local tweenInfo = TweenInfo.new(0.25)
+    if not minimized then
+        tweenService:Create(ContentFrame, tweenInfo, {Size = UDim2.new(1, 0, 0, 0)}):Play()
+        tweenService:Create(MainFrame, tweenInfo, {Size = UDim2.new(originalSize.X.Scale, originalSize.X.Offset, 0, 40)}):Play()
+        MinimizeButton.Text = "+"
+        minimized = true
     else
-        goal.BackgroundTransparency = 1
+        tweenService:Create(MainFrame, tweenInfo, {Size = originalSize}):Play()
+        tweenService:Create(ContentFrame, tweenInfo, {Size = UDim2.new(1, 0, 1, -40)}):Play()
+        MinimizeButton.Text = "-"
+        minimized = false
     end
-    local tween = TweenService:Create(overlay, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal)
-    tween:Play()
-    tween.Completed:Connect(function()
-        if not show then
-            overlay.Visible = false
-        end
-    end)
-end
+end)
 
--- ===== Overlay =====
-local overlay = Instance.new("Frame")
-overlay.Size = UDim2.new(1,0,1,0)
-overlay.Position = UDim2.new(0,0,0,0)
-overlay.BackgroundColor3 = Color3.fromRGB(0,0,0)
-overlay.BackgroundTransparency = 1
-overlay.Visible = false
-overlay.ZIndex = 0
-overlay.Parent = gui
+-- Profile Image Frame
+local PlayerIconFrame = Instance.new("Frame")
+PlayerIconFrame.AnchorPoint = Vector2.new(0.5, 0)
+PlayerIconFrame.Size = UDim2.new(0, 130, 0, 130)
+PlayerIconFrame.Position = UDim2.new(0.5, 0, 0, 10)
+PlayerIconFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+PlayerIconFrame.BorderSizePixel = 0
+PlayerIconFrame.ClipsDescendants = true
+PlayerIconFrame.Parent = ContentFrame
+Instance.new("UICorner", PlayerIconFrame).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", PlayerIconFrame).Thickness = 1.5
 
--- ===== Main Frame =====
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 420, 0, 270)
-mainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Parent = gui
-roundify(mainFrame, 20)
-addStroke(mainFrame, Color3.fromRGB(255,255,255), 2)
+local PlayerIcon = Instance.new("ImageLabel")
+PlayerIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+PlayerIcon.Size = UDim2.new(0, 120, 0, 120)
+PlayerIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+PlayerIcon.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+PlayerIcon.BorderSizePixel = 0
+PlayerIcon.ClipsDescendants = true
+PlayerIcon.Image = "rbxassetid://0" -- default blank
+PlayerIcon.Parent = PlayerIconFrame
+Instance.new("UICorner", PlayerIcon).CornerRadius = UDim.new(1, 0)
 
--- ===== Title Bar =====
-local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1,0,0,40)
-titleBar.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-titleBar.Parent = mainFrame
-roundify(titleBar, 20)
+-- Username TextBox
+local UsernameBox = Instance.new("TextBox")
+UsernameBox.Name = "UsernameBox"
+UsernameBox.PlaceholderText = "Enter Username"
+UsernameBox.Font = Enum.Font.GothamBold
+UsernameBox.TextSize = 14
+UsernameBox.Size = UDim2.new(0.9, 0, 0, 40)
+UsernameBox.Position = UDim2.new(0.05, 0, 0, 150)
+UsernameBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+UsernameBox.TextColor3 = Color3.new(1, 1, 1)
+UsernameBox.ClearTextOnFocus = false
+Instance.new("UICorner", UsernameBox).CornerRadius = UDim.new(0, 😎
+Instance.new("UIStroke", UsernameBox).Transparency = 0.8
+UsernameBox.Parent = ContentFrame
 
-local titleText = Instance.new("TextLabel")
-titleText.Size = UDim2.new(1,-80,1,0)
-titleText.Position = UDim2.new(0,15,0,0)
-titleText.BackgroundTransparency = 1
-titleText.Font = Enum.Font.GothamBold
-titleText.Text = "🦋CMD MENU🦋"
-titleText.TextSize = 22
-titleText.TextColor3 = Color3.fromRGB(255,255,255)
-titleText.TextXAlignment = Enum.TextXAlignment.Left
-titleText.Parent = titleBar
+-- Action Buttons Container
+local ButtonContainer = Instance.new("Frame")
+ButtonContainer.Size = UDim2.new(1, 0, 0, 120)
+ButtonContainer.Position = UDim2.new(0, 0, 0, 220)
+ButtonContainer.BackgroundTransparency = 1
+ButtonContainer.Parent = ContentFrame
 
--- ===== Buttons on title =====
-local minimizeBtn = Instance.new("TextButton")
-minimizeBtn.Size = UDim2.new(0,35,0,35)
-minimizeBtn.Position = UDim2.new(1,-80,0.5,-17)
-minimizeBtn.Text = "-"
-minimizeBtn.TextSize = 24
-minimizeBtn.Font = Enum.Font.GothamBold
-minimizeBtn.TextColor3 = Color3.fromRGB(255,255,255)
-minimizeBtn.BackgroundColor3 = Color3.fromRGB(90,90,110)
-minimizeBtn.Parent = titleBar
-roundify(minimizeBtn, 10)
-addStroke(minimizeBtn)
-hoverEffect(minimizeBtn, Color3.fromRGB(90,90,110), Color3.fromRGB(120,120,150))
+local ButtonLayout = Instance.new("UIListLayout", ButtonContainer)
+ButtonLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ButtonLayout.Padding = UDim.new(0, 10)
+ButtonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0,35,0,35)
-closeBtn.Position = UDim2.new(1,-40,0.5,-17)
-closeBtn.Text = "X"
-closeBtn.TextSize = 20
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextColor3 = Color3.fromRGB(255,255,255)
-closeBtn.BackgroundColor3 = Color3.fromRGB(200,60,60)
-closeBtn.Parent = titleBar
-roundify(closeBtn, 10)
-addStroke(closeBtn)
-hoverEffect(closeBtn, Color3.fromRGB(200,60,60), Color3.fromRGB(230,80,80))
+-- Freeze Button
+local FreezeButton = Instance.new("TextButton")
+FreezeButton.Size = UDim2.new(0.9, 0, 0, 40)
+FreezeButton.Text = "FREEZE TRADE"
+FreezeButton.Font = Enum.Font.GothamBold
+FreezeButton.TextSize = 14
+FreezeButton.TextColor3 = Color3.new(1, 1, 1)
+FreezeButton.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
+Instance.new("UICorner", FreezeButton).CornerRadius = UDim.new(0, 😎
+Instance.new("UIStroke", FreezeButton).Transparency = 0.8
+FreezeButton.Parent = ButtonContainer
 
--- ===== Content Frame =====
-local contentFrame = Instance.new("Frame")
-contentFrame.Size = UDim2.new(1,0,1,-40)
-contentFrame.Position = UDim2.new(0,0,0,40)
-contentFrame.BackgroundTransparency = 1
-contentFrame.Parent = mainFrame
+-- Force Trade Button
+local ForceTradeButton = Instance.new("TextButton")
+ForceTradeButton.Size = UDim2.new(0.9, 0, 0, 40)
+ForceTradeButton.Text = "FORCE TRADE PETS"
+ForceTradeButton.Font = Enum.Font.GothamBold
+ForceTradeButton.TextSize = 14
+ForceTradeButton.TextColor3 = Color3.new(1, 1, 1)
+ForceTradeButton.BackgroundColor3 = Color3.fromRGB(150, 100, 200)
+Instance.new("UICorner", ForceTradeButton).CornerRadius = UDim.new(0, 😎
+Instance.new("UIStroke", ForceTradeButton).Transparency = 0.8
+ForceTradeButton.Parent = ButtonContainer
 
-local function createMainButton(text, yPos, color, hoverColor)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 380, 0, 50)
-    btn.Position = UDim2.new(0.5, -190, 0, yPos)
-    btn.Text = text
-    btn.TextSize = 22
-    btn.Font = Enum.Font.GothamBold
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.BackgroundColor3 = color
-    btn.Parent = contentFrame
-    roundify(btn, 12)
-    addStroke(btn)
-    hoverEffect(btn, color, hoverColor)
-    return btn
-end
+-- Auto Accept Button
+local AutoAcceptButton = Instance.new("TextButton")
+AutoAcceptButton.Size = UDim2.new(0.9, 0, 0, 40)
+AutoAcceptButton.Text = "AUTO ACCEPT"
+AutoAcceptButton.Font = Enum.Font.GothamBold
+AutoAcceptButton.TextSize = 14
+AutoAcceptButton.TextColor3 = Color3.new(1, 1, 1)
+AutoAcceptButton.BackgroundColor3 = Color3.fromRGB(50, 180, 100)
+Instance.new("UICorner", AutoAcceptButton).CornerRadius = UDim.new(0, 😎
+Instance.new("UIStroke", AutoAcceptButton).Transparency = 0.8
+AutoAcceptButton.Parent = ButtonContainer
 
-local btn1 = createMainButton("🌍 Step 1: Download Resource", 15, Color3.fromRGB(70,130,180), Color3.fromRGB(90,150,200))
-local btn2 = createMainButton("🎲 Step 2: Random Egg", 85, Color3.fromRGB(100,180,100), Color3.fromRGB(130,210,130))
-local btn3 = createMainButton("🌀 Step 3: Spawner Pet", 155, Color3.fromRGB(200,140,70), Color3.fromRGB(230,170,100))
+-- Credit Label
+local CreditLabel = Instance.new("TextLabel")
+CreditLabel.Name = "CreditLabel"
+CreditLabel.Text = "FIXED AND SKIDDED BY SIGMA @rizzify101"
+CreditLabel.Font = Enum.Font.GothamBold
+CreditLabel.TextSize = 16
+CreditLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+CreditLabel.BackgroundTransparency = 1
+CreditLabel.Size = UDim2.new(1, 0, 0, 25)
+CreditLabel.Position = UDim2.new(0, 0, 1, -30)
+CreditLabel.TextXAlignment = Enum.TextXAlignment.Center
+CreditLabel.TextYAlignment = Enum.TextYAlignment.Bottom
+CreditLabel.ZIndex = 5
+CreditLabel.Parent = MainFrame
 
--- ===== Toggle Button =====
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 60, 0, 40)
-toggleBtn.Position = UDim2.new(0, 10, 0.8, 0)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 220)
-toggleBtn.Text = "📜"
-toggleBtn.TextSize = 26
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
-toggleBtn.Parent = gui
-roundify(toggleBtn, 12)
-addStroke(toggleBtn)
-hoverEffect(toggleBtn, Color3.fromRGB(100,100,220), Color3.fromRGB(130,130,250))
-toggleBtn.Active = true
-toggleBtn.Draggable = true
-
--- ===== Logic =====
-local downloading = false
-local downloaded = false
-
-local function alert(msg)
-    game.StarterGui:SetCore("SendNotification",{
-        Title = "⚠️ Alert",
-        Text = msg,
-        Duration = 3
+-- Button Events
+FreezeButton.MouseButton1Click:Connect(function()
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Trade Assist",
+        Text = "Trade frozen!",
+        Duration = 2,
     })
-end
+end)
 
-btn1.MouseButton1Click:Connect(function()
-    if downloading or downloaded then return end
-    downloading = true
-    btn1.Text = "📦 Downloading... 0%"
-    local totalTime = 180
-    local elapsed = 0
-    while elapsed < totalTime do
-        task.wait(1)
-        elapsed += 1
-        btn1.Text = "📦 Downloading... "..math.floor(elapsed/totalTime*100).."%"
+ForceTradeButton.MouseButton1Click:Connect(function()
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Trade Assist",
+        Text = "Force trade triggered!",
+        Duration = 2,
+    })
+end)
+
+AutoAcceptButton.MouseButton1Click:Connect(function()
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Trade Assist",
+        Text = "Auto accept triggered!",
+        Duration = 2,
+    })
+end)
+
+-- Username input with profile picture loading
+UsernameBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local username = UsernameBox.Text
+        if username ~= "" then
+            local success, userId = pcall(function()
+                return Players:GetUserIdFromNameAsync(username)
+            end)
+            if success then
+                local thumbType = Enum.ThumbnailType.HeadShot
+                local thumbSize = Enum.ThumbnailSize.Size180x180
+                local content, isReady = Players:GetUserThumbnailAsync(userId, thumbType, thumbSize)
+                PlayerIcon.Image = content
+                game.StarterGui:SetCore("SendNotification", {
+                    Title = "Trade Assist",
+                    Text = "Loaded profile for: "..username,
+                    Duration = 2,
+                })
+            else
+                game.StarterGui:SetCore("SendNotification", {
+                    Title = "Trade Assist",
+                    Text = "Invalid username.",
+                    Duration = 2,
+                })
+            end
+        end
     end
-    downloading = false
-    downloaded = true
-    btn1.Text = "✅ Download Complete!"
 end)
-
-btn2.MouseButton1Click:Connect(function()
-    if not downloaded then
-        alert("You must complete Step 1 first!")
-        return
-    end
-    alert("❌ Resource package error, please rejoin the game.")
-end)
-
-btn3.MouseButton1Click:Connect(function()
-    if not downloaded then
-        alert("You must complete Step 1 first!")
-        return
-    end
-    alert("❌ Resource package error, please rejoin the game.")
-end)
-
--- ===== Toggle Show/Hide =====
-minimizeBtn.MouseButton1Click:Connect(function()
-    mainFrame.Visible = false
-    fadeOverlay(overlay, false)
-end)
-
-toggleBtn.MouseButton1Click:Connect(function()
-    local newState = not mainFrame.Visible
-    mainFrame.Visible = newState
-    fadeOverlay(overlay, newState)
-end)
-
-closeBtn.MouseButton1Click:Connect(function()
-    mainFrame.Visible = false
-    fadeOverlay(overlay, false)
-end)
-
